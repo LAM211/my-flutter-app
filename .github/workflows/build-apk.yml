@@ -24,8 +24,8 @@ jobs:
         with:
           channel: 'stable'
 
-      # Fresh Android Template + Exact SDK 36 & Desugar 2.1.4 Injection
-      - name: Rebuild Android Project & Fix SDK Version
+      # Fresh Android Template + SDK 36 + Desugar 2.1.4 + Chat App Permissions Injection
+      - name: Rebuild Android Project & Fix Manifest
         run: |
           # 1. Android folder အဟောင်းကို ဖျက်မည်
           rm -rf android
@@ -45,7 +45,7 @@ jobs:
           EOF
           fi
 
-          # 4. Requirements အတိအကျဖြင့် build.gradle ကို ရေးသားမည် (compileSdk 36 & desugar 2.1.4)
+          # 4. Requirements အတိအကျဖြင့် build.gradle ကို ရေးသားမည်
           cat << 'EOF' > android/app/build.gradle
           plugins {
               id "com.android.application"
@@ -90,6 +90,24 @@ jobs:
               coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
           }
           EOF
+
+          # 5. Chat App အတွက် လိုအပ်သော Permissions အားလုံးကို Manifest ထဲသို့ Inject ပြုလုပ်ခြင်း
+          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST_FILE" ]; then
+            sed -i '/<manifest/a \
+    <uses-permission android:name="android.permission.INTERNET" />\
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
+    <uses-permission android:name="android.permission.WAKE_LOCK" />\
+    <uses-permission android:name="android.permission.CAMERA" />\
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />\
+    <uses-permission android:name="android.permission.VIBRATE" />\
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />\
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />' "$MANIFEST_FILE"
+          fi
 
       - name: Clean & Get Dependencies
         run: |
