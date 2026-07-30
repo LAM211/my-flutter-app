@@ -24,16 +24,16 @@ jobs:
         with:
           channel: 'stable'
 
-      # Fresh Android Template + Desugaring Fix (For ota_update)
-      - name: Rebuild Android Project & Fix Desugaring
+      # Fresh Android Project & Direct Build.gradle Injection (Fix Desugaring)
+      - name: Rebuild Android Project & Apply Desugaring
         run: |
           # 1. Android folder အဟောင်းကို ဖျက်မည်
           rm -rf android
 
-          # 2. Template အသစ်ထုတ်မည်
+          # 2. Android template အသစ်ထုတ်မည်
           flutter create . --platforms=android --org=com.akariz
 
-          # 3. MainActivity.kt ချိန်ပေးမည်
+          # 3. MainActivity.kt ပြင်ဆင်မည်
           MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
           if [ -n "$MAIN_ACT" ]; then
             cat << 'EOF' > "$MAIN_ACT"
@@ -45,12 +45,51 @@ jobs:
           EOF
           fi
 
-          # 4. ota_update အတွက် Core Library Desugaring ထည့်ပေးခြင်း
-          GRADLE_FILE="android/app/build.gradle"
-          if [ -f "$GRADLE_FILE" ]; then
-            sed -i 's/compileOptions {/compileOptions {\n        coreLibraryDesugaringEnabled true/' "$GRADLE_FILE"
-            sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' "$GRADLE_FILE"
-          fi
+          # 4. Desugaring အပြည့်အစုံပါဝင်သော android/app/build.gradle ကို တိုက်ရိုက် ရေးသားမည်
+          cat << 'EOF' > android/app/build.gradle
+          plugins {
+              id "com.android.application"
+              id "kotlin-android"
+              id "dev.flutter.flutter-gradle-plugin"
+          }
+
+          android {
+              namespace "com.akariz.chat"
+              compileSdk 34
+
+              compileOptions {
+                  coreLibraryDesugaringEnabled true
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+
+              defaultConfig {
+                  applicationId "com.akariz.chat"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.debug
+                  }
+              }
+          }
+
+          flutter {
+              source '../..'
+          }
+
+          dependencies {
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+          }
+          EOF
 
       - name: Clean & Get Dependencies
         run: |
