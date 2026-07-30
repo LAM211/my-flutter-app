@@ -24,31 +24,26 @@ jobs:
         with:
           channel: 'stable'
 
-      # ၁။ MainActivity.kt ဖိုင် အဆင်သင့်ရှိစေရန် အနည်းငယ်သာ ပြင်ပေးခြင်း
-      - name: Ensure MainActivity Setup
+      # MainActivity.kt ကို Import Error မတက်မည့် Native Code ဖြင့် အစားထိုးခြင်း
+      - name: Clean Fix MainActivity
         run: |
           MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
           if [ -n "$MAIN_ACT" ]; then
             cat << 'EOF' > "$MAIN_ACT"
           package com.akariz.chat
 
-          import io.flutter.embedding.android.FlutterActivity
+          import android.app.Activity
 
-          class MainActivity: FlutterActivity()
+          class MainActivity: Activity()
           EOF
           fi
 
-      # ၂။ Flutter Dependency များ ရယူခြင်း
       - name: Install Dependencies
         run: flutter pub get
 
-      # ၃။ Android Build Configurations များကို Auto-Fix လုပ်၍ APK Build ခြင်း
       - name: Build APK (Release)
-        run: |
-          flutter config --enable-android
-          flutter build apk --release --android-skip-build-dependency-validation
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
-      # ၄။ ရရှိလာသော APK ကို Artifact အဖြစ် Upload တင်ပေးခြင်း
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
