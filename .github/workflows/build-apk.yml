@@ -24,8 +24,8 @@ jobs:
         with:
           channel: 'stable'
 
-      # Fresh Android Project & Direct Build.gradle Injection (Fix Desugaring)
-      - name: Rebuild Android Project & Apply Desugaring
+      # Fresh Android Template + Exact SDK 36 & Desugar 2.1.4 Injection
+      - name: Rebuild Android Project & Fix SDK Version
         run: |
           # 1. Android folder အဟောင်းကို ဖျက်မည်
           rm -rf android
@@ -45,7 +45,7 @@ jobs:
           EOF
           fi
 
-          # 4. Desugaring အပြည့်အစုံပါဝင်သော android/app/build.gradle ကို တိုက်ရိုက် ရေးသားမည်
+          # 4. Requirements အတိအကျဖြင့် build.gradle ကို ရေးသားမည် (compileSdk 36 & desugar 2.1.4)
           cat << 'EOF' > android/app/build.gradle
           plugins {
               id "com.android.application"
@@ -55,7 +55,7 @@ jobs:
 
           android {
               namespace "com.akariz.chat"
-              compileSdk 34
+              compileSdk 36
 
               compileOptions {
                   coreLibraryDesugaringEnabled true
@@ -70,7 +70,7 @@ jobs:
               defaultConfig {
                   applicationId "com.akariz.chat"
                   minSdk 21
-                  targetSdk 34
+                  targetSdk 36
                   versionCode 1
                   versionName "1.0"
               }
@@ -87,7 +87,7 @@ jobs:
           }
 
           dependencies {
-              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+              coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
           }
           EOF
 
