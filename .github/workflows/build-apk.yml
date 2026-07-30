@@ -24,8 +24,8 @@ jobs:
         with:
           channel: 'stable'
 
-      # Fresh Android Template + SDK 36 + Desugar 2.1.4 + Safe Manifest Injection
-      - name: Rebuild Android Project & Fix Manifest
+      # Fresh Android Template + SDK 36 + Desugar 2.1.4 + Safe Python Manifest Patch
+      - name: Rebuild Android Project & Patch Manifest
         run: |
           # 1. Android folder အဟောင်းကို ဖျက်မည်
           rm -rf android
@@ -91,14 +91,35 @@ jobs:
           }
           EOF
 
-          # 5. Manifest Injection - Single Line Method (No YAML Syntax Errors)
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_FILE" ]; then
-            PERMISSIONS="<uses-permission android:name=\"android.permission.INTERNET\"/>\n<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n<uses-permission android:name=\"android.permission.WAKE_LOCK\"/>\n<uses-permission android:name=\"android.permission.CAMERA\"/>\n<uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>\n<uses-permission android:name=\"android.permission.VIBRATE\"/>\n<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>\n<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>\n<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>"
-            
-            sed -i "/<manifest/a $PERMISSIONS" "$MANIFEST_FILE"
-            sed -i 's/android:label=".*"/android:label="AkarizChat"/' "$MANIFEST_FILE"
-          fi
+          # 5. Python ဖြင့် XML Format မပျက်အောင် Permissions နှင့် App Name ထည့်ခြင်း
+          python3 -c '
+          import re
+
+          manifest_path = "android/app/src/main/AndroidManifest.xml"
+          with open(manifest_path, "r") as f:
+              content = f.read()
+
+          permissions = """
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+          """
+
+          # Insert permissions right inside <manifest>
+          content = re.sub(r"(<manifest[^>]*>)", r"\1\n" + permissions, content)
+
+          # Change App Label to AkarizChat
+          content = re.sub(r"android:label=\"[^\"]*\"", "android:label=\"AkarizChat\"", content)
+
+          with open(manifest_path, "w") as f:
+              f.write(content)
+          '
 
       - name: Clean & Get Dependencies
         run: |
