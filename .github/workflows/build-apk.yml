@@ -24,10 +24,16 @@ jobs:
         with:
           channel: 'stable'
 
-      # ၁။ MainActivity.kt နှင့် Generated File များ သန့်ရှင်းရေးလုပ်ခြင်း
-      - name: Fix MainActivity & Reset Generated Plugins
+      # FlutLab/Project အဟောင်း၏ Android Template ကို Flutter Official Engine ဖြင့် Recreate လုပ်ခြင်း
+      - name: Reconstruct Android Project Template
         run: |
-          # MainActivity.kt ကို Standard Flutter Engine နှင့် ပြန်ပြင်ခြင်း
+          # 1. ပျက်စီး/ကျန်ခဲ့သော Generated File များကို ရှင်းထုတ်ခြင်း
+          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+          # 2. Android Folder ကို Flutter Standard Structure ဖြင့် Auto Re-create လုပ်ခြင်း
+          flutter create . --platforms=android --org=com.akariz
+
+          # 3. MainActivity.kt ကို Standard Flutter Embedding ပြန်ချိန်ပေးခြင်း
           MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
           if [ -n "$MAIN_ACT" ]; then
             cat << 'EOF' > "$MAIN_ACT"
@@ -39,20 +45,14 @@ jobs:
           EOF
           fi
 
-          # ကြိုတင် ပါလာသော Classpath မကိုက်သည့် Generated File ကို ဖြတ်ထုတ်ခြင်း
-          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
-
-      # ၂။ Dependency များနှင့် Flutter Plugin Binding များကို သန့်ရှင်းစွာ Auto-Generate ပြုလုပ်ခြင်း
       - name: Clean & Get Dependencies
         run: |
           flutter clean
           flutter pub get
 
-      # ၃။ APK Build ပြုလုပ်ခြင်း
       - name: Build APK (Release)
         run: flutter build apk --release --android-skip-build-dependency-validation
 
-      # ၄။ APK Upload တင်ခြင်း
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
