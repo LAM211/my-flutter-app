@@ -24,16 +24,16 @@ jobs:
         with:
           channel: 'stable'
 
-      # FlutLab/Project အဟောင်း၏ Android Template ကို Flutter Official Engine ဖြင့် Recreate လုပ်ခြင်း
-      - name: Reconstruct Android Project Template
+      # ပျက်စီးနေသော android folder အဟောင်းကို ဖျက်ပြီး Fresh Android Project ပြန်ဆောက်ခြင်း
+      - name: Rebuild Fresh Android Project
         run: |
-          # 1. ပျက်စီး/ကျန်ခဲ့သော Generated File များကို ရှင်းထုတ်ခြင်း
-          rm -rf android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+          # 1. android folder ဟောင်းကို အကုန်ဖျက်ပစ်မည်
+          rm -rf android
 
-          # 2. Android Folder ကို Flutter Standard Structure ဖြင့် Auto Re-create လုပ်ခြင်း
+          # 2. Flutter Stable Engine ဖြင့် android folder အသစ်စက်စက် ပြန်ထုတ်မည်
           flutter create . --platforms=android --org=com.akariz
 
-          # 3. MainActivity.kt ကို Standard Flutter Embedding ပြန်ချိန်ပေးခြင်း
+          # 3. MainActivity.kt ကို သန့်ရှင်းစွာ ချိန်ပေးမည်
           MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
           if [ -n "$MAIN_ACT" ]; then
             cat << 'EOF' > "$MAIN_ACT"
