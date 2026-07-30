@@ -24,12 +24,45 @@ jobs:
         with:
           channel: 'stable'
 
-      - name: Auto-fix MainActivity.kt
+      # Gradle & MainActivity Embedding Fix
+      - name: Auto-fix Gradle and MainActivity
         run: |
-          MAIN_ACTIVITY=$(find . -name "MainActivity.kt")
-          if [ -f "$MAIN_ACTIVITY" ]; then
-            echo "Fixing MainActivity.kt automatically..."
-            echo -e "package com.akariz.chat\n\nimport io.flutter.embedding.android.FlutterActivity\n\nclass MainActivity: FlutterActivity() {\n}" > "$MAIN_ACTIVITY"
+          # 1. MainActivity.kt ပြင်ခြင်း
+          MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
+          if [ -f "$MAIN_ACT" ]; then
+            echo "Fixing MainActivity.kt..."
+            cat << 'EOF' > "$MAIN_ACT"
+          package com.akariz.chat
+
+          import io.flutter.embedding.android.FlutterActivity
+
+          class MainActivity: FlutterActivity()
+          EOF
+          fi
+
+          # 2. build.gradle.kts ထဲသို့ Flutter Embedding/Java Compatibility ဖြည့်ပေးခြင်း
+          APP_GRADLE="android/app/build.gradle.kts"
+          if [ -f "$APP_GRADLE" ]; then
+            if ! grep -q "compileSdk" "$APP_GRADLE"; then
+              echo "Fixing build.gradle.kts..."
+              cat << 'EOF' >> "$APP_GRADLE"
+
+          android {
+              compileSdk = 34
+              defaultConfig {
+                  minSdk = 21
+                  targetSdk = 34
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          EOF
+            fi
           fi
 
       - name: Install Dependencies
