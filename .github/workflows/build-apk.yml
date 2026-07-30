@@ -24,13 +24,12 @@ jobs:
         with:
           channel: 'stable'
 
-      # MainActivity.kt နှင့် build.gradle Fix
-      - name: Fix MainActivity and Gradle
+      # Android Settings & Flutter Embedding Direct Patch
+      - name: Patch Android Project Settings
         run: |
-          # 1. MainActivity.kt ကို သန့်ရှင်းစွာ ပြန်ရေးခြင်း
+          # 1. MainActivity.kt ကို သန့်ရှင်းအောင် ပြန်ပြင်ခြင်း
           MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
           if [ -n "$MAIN_ACT" ]; then
-            echo "Rewriting $MAIN_ACT ..."
             mkdir -p $(dirname "$MAIN_ACT")
             cat << 'EOF' > "$MAIN_ACT"
           package com.akariz.chat
@@ -41,33 +40,69 @@ jobs:
           EOF
           fi
 
-          # 2. android/app/build.gradle သို့မဟုတ် build.gradle.kts ထဲသို့ compileSdk / dependencies ဖြည့်သွင်းခြင်း
-          GRADLE_FILE=""
-          if [ -f "android/app/build.gradle.kts" ]; then
-            GRADLE_FILE="android/app/build.gradle.kts"
-          elif [ -f "android/app/build.gradle" ]; then
-            GRADLE_FILE="android/app/build.gradle"
+          # 2. settings.gradle.kts ထဲသို့ Flutter Plugin Auto-Apply လုပ်ခြင်း
+          if [ -f "android/settings.gradle.kts" ]; then
+            cat << 'EOF' > android/settings.gradle.kts
+          pluginManagement {
+              def devFlutterSdkPath = settings.extra["flutter.sdk"]
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          plugins {
+              id("dev.flutter.flutter-plugin-loader") version "1.0.0"
+              id("com.android.application") version "8.3.0" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.22" apply false
+          }
+
+          include(":app")
+          EOF
           fi
 
-          if [ -n "$GRADLE_FILE" ]; then
-            echo "Updating $GRADLE_FILE ..."
-            # Dependency မရှိပါက ဖြည့်ပေးခြင်း
-            if ! grep -q "compileSdk" "$GRADLE_FILE"; then
-              cat << 'EOF' >> "$GRADLE_FILE"
+          # 3. android/app/build.gradle.kts သို့ Flutter Engine Plugins ထည့်ပေးခြင်း
+          if [ -f "android/app/build.gradle.kts" ]; then
+            cat << 'EOF' > android/app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("kotlin-android")
+              id("dev.flutter.flutter-gradle-plugin")
+          }
 
           android {
+              namespace = "com.akariz.chat"
               compileSdk = 34
-              defaultConfig {
-                  minSdk = 21
-                  targetSdk = 34
-              }
+
               compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_17
                   targetCompatibility = JavaVersion.VERSION_17
               }
+
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+
+              defaultConfig {
+                  applicationId = "com.akariz.chat"
+                  minSdk = 21
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.getByName("debug")
+                  }
+              }
+          }
+
+          flutter {
+              source = "../.."
           }
           EOF
-            fi
           fi
 
       - name: Install Dependencies
