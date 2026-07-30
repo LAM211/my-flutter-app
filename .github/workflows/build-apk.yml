@@ -24,16 +24,16 @@ jobs:
         with:
           channel: 'stable'
 
-      # ပျက်စီးနေသော android folder အဟောင်းကို ဖျက်ပြီး Fresh Android Project ပြန်ဆောက်ခြင်း
-      - name: Rebuild Fresh Android Project
+      # Fresh Android Template + Desugaring Fix (For ota_update)
+      - name: Rebuild Android Project & Fix Desugaring
         run: |
-          # 1. android folder ဟောင်းကို အကုန်ဖျက်ပစ်မည်
+          # 1. Android folder အဟောင်းကို ဖျက်မည်
           rm -rf android
 
-          # 2. Flutter Stable Engine ဖြင့် android folder အသစ်စက်စက် ပြန်ထုတ်မည်
+          # 2. Template အသစ်ထုတ်မည်
           flutter create . --platforms=android --org=com.akariz
 
-          # 3. MainActivity.kt ကို သန့်ရှင်းစွာ ချိန်ပေးမည်
+          # 3. MainActivity.kt ချိန်ပေးမည်
           MAIN_ACT=$(find android/app/src/main -name "MainActivity.kt" 2>/dev/null)
           if [ -n "$MAIN_ACT" ]; then
             cat << 'EOF' > "$MAIN_ACT"
@@ -43,6 +43,13 @@ jobs:
 
           class MainActivity: FlutterActivity()
           EOF
+          fi
+
+          # 4. ota_update အတွက် Core Library Desugaring ထည့်ပေးခြင်း
+          GRADLE_FILE="android/app/build.gradle"
+          if [ -f "$GRADLE_FILE" ]; then
+            sed -i 's/compileOptions {/compileOptions {\n        coreLibraryDesugaringEnabled true/' "$GRADLE_FILE"
+            sed -i '/dependencies {/a \    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"' "$GRADLE_FILE"
           fi
 
       - name: Clean & Get Dependencies
